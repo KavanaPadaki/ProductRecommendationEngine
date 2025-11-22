@@ -1,0 +1,37 @@
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+
+# Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE crap
+.vscode/
+.idea/
+*.iml
+
+# OS garbage
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Local config
+*.env
+.envrc
