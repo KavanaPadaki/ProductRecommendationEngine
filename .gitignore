@@ -35,3 +35,17 @@ Thumbs.db
 # Local config
 *.env
 .envrc
+# Model artifacts
+models/*.npy
+models/*.index
+models/*.bin
+
+# Data
+data/raw/
+data/processed/*.npz
+
+# Python
+__pycache__/
+*.pyc
+.env
+
