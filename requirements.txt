@@ -1,18 +1,19 @@
-pandas==2.2.2
+# Core
 numpy==1.26.4
-scikit-learn==1.5.0
-matplotlib==3.8.4
-seaborn==0.13.2
+pandas==2.2.2
+scipy==1.10.1
 tqdm==4.66.4
 
+# Recommender
 implicit==0.7.2
-lightfm==1.17
+faiss-cpu==1.7.3
 
-sentence-transformers==2.2.2
-faiss-cpu==1.7.4
-
+# API
 fastapi==0.110.0
 uvicorn==0.29.0
+
+# UI
 streamlit==1.33.0
 
+# Utils
 pyyaml==6.0.1
