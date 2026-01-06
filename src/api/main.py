@@ -21,7 +21,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import get_rec
 
 # import inference primitives
-from src.inference.model_loader import load_all, save_faiss_index, ModelArtifacts
+from src.inference.model_loader import (
+    load_all,
+    save_faiss_index,
+    ModelArtifacts,
+    ensure_hf_artifacts,   
+)
+
 from src.inference.recommender import Recommender
 from src.inference.faiss_index import build_faiss_cpu_index, build_faiss_gpu_index
 
@@ -128,4 +134,5 @@ def root():
 def recommend_cached(user_idx: int, k: int = 10, use_faiss: bool = True):
     items, scores = _cached_recommend(user_idx, k, bool(use_faiss), CANDIDATE_POOL)
     return {"user_idx": user_idx, "items": items, "scores": scores}
+
 
