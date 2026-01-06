@@ -32,6 +32,11 @@ MODEL_DIR = os.environ.get("MODEL_DIR", "./models")
 USE_FAISS = os.environ.get("USE_FAISS", "1") == "1"
 FAISS_GPU = os.environ.get("FAISS_GPU", "0") == "1"
 CANDIDATE_POOL = int(os.environ.get("CANDIDATE_POOL", 500))
+HF_REPO = os.environ.get(
+    "HF_MODEL_REPO",
+    "KavanaPadaki/product-recommender-als"
+)
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("recommender.api")
@@ -43,6 +48,19 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+ensure_hf_artifacts(
+    repo_id=HF_REPO,
+    model_dir=MODEL_DIR,
+    filenames=[
+        "item_factors.npy",
+        "user_factors.npy",
+        "item_vectors_normed.npy",
+        "faiss.index",
+        "mappings.json",
+        "item_meta.json",
+    ],
+)
+
 
 # Global recommender placeholder
 _GLOBAL_RECOMMENDER: Optional[Recommender] = None
@@ -110,3 +128,4 @@ def root():
 def recommend_cached(user_idx: int, k: int = 10, use_faiss: bool = True):
     items, scores = _cached_recommend(user_idx, k, bool(use_faiss), CANDIDATE_POOL)
     return {"user_idx": user_idx, "items": items, "scores": scores}
+
