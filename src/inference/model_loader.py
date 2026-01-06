@@ -1,21 +1,13 @@
 """
 src/inference/model_loader.py
 
-Responsibilities:
-- Load saved artifacts from models/ directory:
-    - item_factors.npy  (shape: num_items x f)   <- implicit.user_factors after fit(train.T)
-    - user_factors.npy  (shape: num_users x f)   <- implicit.item_factors after fit(train.T)
-    - mappings.json     (optional)
-    - faiss.index       (optional)
-    - item_vectors_normed.npy (optional; L2-normalized item vectors)
-- Provide a simple ModelArtifacts dataclass for other modules to consume.
-- Provide save/load helpers for FAISS index (optional).
 """
 
 import json
 import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Dict, Any
+from huggingface_hub import hf_hub_download
 
 import numpy as np
 
@@ -59,6 +51,23 @@ def load_factors(model_dir: str) -> Tuple[np.ndarray, np.ndarray]:
     item_vectors = np.load(item_path)
     user_vectors = np.load(user_path)
     return item_vectors, user_vectors
+
+def ensure_hf_artifacts(
+    repo_id: str,
+    model_dir: str,
+    filenames: list,
+):
+    os.makedirs(model_dir, exist_ok=True)
+
+    for fname in filenames:
+        local_path = os.path.join(model_dir, fname)
+        if not os.path.exists(local_path):
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=fname,
+                local_dir=model_dir,
+                local_dir_use_symlinks=False,
+            )
 
 
 def try_load_faiss_index(model_dir: str) -> Optional[Any]:
@@ -121,3 +130,4 @@ def save_faiss_index(index, model_dir: str, filename: str = "faiss.index"):
     path = os.path.join(model_dir, filename)
     faiss.write_index(index, path)
     return path
+
