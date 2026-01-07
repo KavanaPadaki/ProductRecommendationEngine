@@ -9,42 +9,45 @@ Streamlit UI for Recommender System
 Run locally:
     streamlit run src/ui/streamlit_app.py
 
-Env vars:
+Env / secrets:
     API_URL         (default: http://localhost:8000)
-    ITEM_META_PATH  (optional, default: models/item_meta.json)
+    ITEM_META_PATH  (optional, default: not used)
 """
 
 import os
 import json
 import time
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 import requests
 import pandas as pd
 import streamlit as st
 
 # -------------------------
+# Page config
+# -------------------------
+st.set_page_config(
+    page_title="Product Recommender Demo",
+    layout="wide",
+)
+
+# -------------------------
 # Config
 # -------------------------
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
+API_URL = st.secrets.get("API_URL", os.environ.get("API_URL", "http://localhost:8000"))
 
 RECOMMEND_ENDPOINT = f"{API_URL}/api/recommend"
 SIMILAR_ENDPOINT = f"{API_URL}/api/similar"
 METADATA_ENDPOINT = f"{API_URL}/api/metadata"
 
-ITEM_META_PATH = os.environ.get("ITEM_META_PATH", "models/item_meta.json")
-
-st.set_page_config(
-    page_title="Recommender Demo",
-    layout="wide",
-)
+ITEM_META_PATH = st.secrets.get("ITEM_META_PATH", os.environ.get("ITEM_META_PATH"))
 
 # -------------------------
 # Helpers
 # -------------------------
 @st.cache_data
-def load_item_meta(path: str) -> Dict[str, Dict]:
-    if not os.path.exists(path):
+def load_item_meta(path: Optional[str]) -> Dict[str, Dict]:
+    if not path or not os.path.exists(path):
         return {}
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -56,16 +59,11 @@ def fetch_metadata() -> Optional[Dict]:
         r = requests.get(METADATA_ENDPOINT, timeout=5)
         r.raise_for_status()
         return r.json()
-    except Exception:
-        return None
+    except Exception as e:
+        return {"error": str(e)}
 
 
-def post_recommend(
-    user_idx: int,
-    k: int,
-    use_faiss: bool,
-    candidate_pool_size: int,
-):
+def post_recommend(user_idx: int, k: int, use_faiss: bool, candidate_pool_size: int):
     payload = {
         "user_idx": int(user_idx),
         "k": int(k),
@@ -92,6 +90,7 @@ def get_similar(item_idx: int, k: int = 10):
 # -------------------------
 item_meta = load_item_meta(ITEM_META_PATH)
 
+
 def item_title(item_idx: int) -> str:
     return item_meta.get(str(item_idx), {}).get("title", "")
 
@@ -99,19 +98,26 @@ def item_title(item_idx: int) -> str:
 # -------------------------
 # UI
 # -------------------------
-st.title("🛒 Recommender System — Demo")
+st.title("Product Recommender System — Demo")
 
 meta = fetch_metadata()
-if meta is None:
-    st.error("Backend not reachable. Check API_URL.")
+
+backend_ok = isinstance(meta, dict) and "num_users" in meta
+
+if not backend_ok:
+    st.error(
+        f"Backend not reachable.\n\n"
+        f"API_URL = {API_URL}\n\n"
+        f"Response = {meta}"
+    )
     st.stop()
 
-with st.expander("🔧 Backend Info", expanded=False):
-    st.write(f"API URL: `{API_URL}`")
-    st.write(f"Users: {meta['num_users']}")
-    st.write(f"Items: {meta['num_items']}")
-    st.write(f"Latent factors: {meta['factors']}")
-    st.write(f"FAISS enabled: {meta['faiss']}")
+with st.expander("Backend Info", expanded=False):
+    st.write(f"**API URL:** `{API_URL}`")
+    st.write(f"**Users:** {meta['num_users']}")
+    st.write(f"**Items:** {meta['num_items']}")
+    st.write(f"**Latent factors:** {meta['factors']}")
+    st.write(f"**FAISS enabled:** {meta['faiss']}")
 
 st.markdown("---")
 
@@ -142,7 +148,7 @@ with col_left:
         step=50,
     )
 
-    run_btn = st.button("Recommend")
+    run_btn = st.button("Recommend", disabled=not backend_ok)
 
 # -------------------------
 # Recommendations
@@ -167,8 +173,12 @@ with col_right:
             latency = time.time() - t0
             st.caption(f"Response time: {latency:.2f}s")
 
-        items = rec["items"]
-        scores = rec["scores"]
+        items = rec.get("items", [])
+        scores = rec.get("scores", [])
+
+        if not items:
+            st.warning("No recommendations returned.")
+            st.stop()
 
         df = pd.DataFrame({
             "rank": range(1, len(items) + 1),
@@ -182,7 +192,7 @@ with col_right:
         # -------------------------
         # Similar items
         # -------------------------
-        st.markdown("### 🔁 Similar Items")
+        st.markdown("### Similar Items")
 
         selected_item = st.selectbox(
             "Select an item",
@@ -198,7 +208,11 @@ with col_right:
                     st.error(f"Similar-items request failed: {e}")
                     st.stop()
 
-            neighbors = sim.get("neighbors", [])
+            if "neighbors" not in sim:
+                st.error(f"Unexpected response: {sim}")
+                st.stop()
+
+            neighbors = sim["neighbors"]
 
             sim_df = pd.DataFrame({
                 "rank": range(1, len(neighbors) + 1),
@@ -210,5 +224,5 @@ with col_right:
 
 st.markdown("---")
 st.caption(
-    "UI is a thin client. All models, embeddings, and FAISS live in the backend."
+    "This UI is a thin client. All models, embeddings, and FAISS live in the backend."
 )
