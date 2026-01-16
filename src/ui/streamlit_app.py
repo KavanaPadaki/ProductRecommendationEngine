@@ -54,13 +54,21 @@ def load_item_meta(path: Optional[str]) -> Dict[str, Dict]:
 
 
 @st.cache_data
-def fetch_metadata() -> Optional[Dict]:
-    try:
-        r = requests.get(METADATA_ENDPOINT, timeout=5)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
+def fetch_metadata(retries: int = 3, timeout: int = 20):
+    last_error = None
+    for attempt in range(retries):
+        try:
+            r = requests.get(
+                METADATA_ENDPOINT,
+                timeout=timeout,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last_error = e
+            time.sleep(2)
+    return {"error": str(last_error)}
+
 
 
 def post_recommend(user_idx: int, k: int, use_faiss: bool, candidate_pool_size: int):
@@ -106,10 +114,12 @@ backend_ok = isinstance(meta, dict) and "num_users" in meta
 
 if not backend_ok:
     st.error(
-        f"Backend not reachable.\n\n"
-        f"API_URL = {API_URL}\n\n"
-        f"Response = {meta}"
+    "Backend is waking up (cold start).\n\n"
+    "This can take 30–60 seconds on free tiers.\n\n"
+    f"API_URL: {API_URL}\n\n"
+    f"Error: {meta}"
     )
+
     st.stop()
 
 with st.expander("Backend Info", expanded=False):
@@ -226,3 +236,4 @@ st.markdown("---")
 st.caption(
     "This UI is a thin client. All models, embeddings, and FAISS live in the backend."
 )
+
