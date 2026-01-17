@@ -1,31 +1,126 @@
-# 🚀 AI-Powered Product Recommendation System (Amazon Reviews)
+# Product Recommendation Engine — Production-Style System
 
-A complete, production-style **recommendation engine** built using **1.7M Amazon Electronics reviews**.  
-Implements **collaborative filtering**, **hybrid LLM/SBERT embeddings**, **FAISS ANN retrieval**, and a **Streamlit UI** for interactive personalized recommendations.
+An end-to-end recommender system designed with real-world scale, latency, and deployment constraints in mind.
 
----
-
-## Key Highlights
-- **Full EDA**: sparsity, long-tail distribution, temporal patterns, rating bias  
-- **Time-Aware Train/Val/Test Split** (leave-one-out per user, no leakage)  
-- **Implicit Feedback Models**: ALS (implicit MF), LightFM (WARP/BPR)  
-- **Hybrid Recommender**: CF + SBERT/LLM text embeddings  
-- **FAISS Vector Search**: fast ANN top-K retrieval for millions of items  
-- **Streamlit App**: user selection → recommended products + explanations  
-- **Production-Ready Structure**: modular src/, configs/, scripts/, tests/  
+This project demonstrates how a recommender system is designed, evaluated, and deployed beyond notebooks — covering offline training, online inference, approximate nearest neighbor search, and UI integration.
 
 ---
 
-##  Tech Stack
-**Python**, **Pandas**, **NumPy**, **Implicit**, **LightFM**, **Sentence-Transformers**,  
-**FAISS**, **Streamlit**, **FastAPI**, **Scikit-learn**
+## Problem Framing
+
+**Goal:** Recommend relevant products to users based on historical implicit feedback (views / interactions), optimizing ranking quality and low-latency inference.
+
+**Key constraints addressed:**
+- Large-scale user–item interaction data
+- Implicit feedback (no explicit ratings)
+- Fast online inference requirements
+- Realistic offline evaluation
+- Deployment on commodity infrastructure
+---
+
+## Links
+
+- [**Live Demo (UI)**](https://appuctrecommendationengine-2b9wcgguunq9zfnjangey7.streamlit.app/)
+- [**Inference API**](https://productrecommendationengine.onrender.com/)
+
 
 ---
 
-## What This Project Demonstrates
-- Ability to build scalable, real-world **ranking & recommendation systems**  
-- Expertise with **sparse data**, **cold-start mitigation**, and **hybrid modeling**  
-- Strong ML engineering skills: data pipelines, retrieval, evaluation, deployment  
-- Modern AI integration using **LLM-powered embeddings**  
-- Clean, maintainable, production-grade codebase  
+## System Architecture (High Level)
 
+- **Offline Training**
+  - Train collaborative filtering models on implicit feedback
+  - Export dense user/item embeddings
+  - Precompute ANN index for inference
+
+- **Online Inference (API)**
+  - Load embeddings and ANN index into memory
+  - Serve recommendations via REST APIs
+  - Stateless, low-latency design
+
+- **Frontend (UI)**
+  - Thin client
+  - No ML logic
+  - Communicates only with inference APIs
+
+---
+
+## Models & Algorithms
+
+### Matrix Factorization (ALS — Implicit Feedback)
+- Confidence-weighted implicit interactions (BM25)
+- Strong, scalable baseline
+- Used as the production inference model
+
+**Rationale:** Well-tuned matrix factorization remains a strong baseline in many production recommender systems due to simplicity, interpretability, and latency guarantees.
+
+---
+
+### LightGCN (Graph-Based Collaborative Filtering)
+- BPR loss
+- Message passing over user–item interaction graph
+- Included to demonstrate understanding of modern graph-based recommenders
+
+---
+
+## Offline Evaluation
+
+- **Hard Negative Sampling**
+  - Negatives sampled from high-score non-interacted items
+  - Better correlation with online ranking difficulty
+
+- **Metrics**
+  - Recall@K
+  - NDCG@K
+
+---
+
+## Online Inference & Performance
+
+- **FAISS (Approximate Nearest Neighbors)**
+  - Pre-normalized item embeddings
+  - CPU-based FAISS index
+  - Two-stage retrieval: candidate generation → re-ranking
+
+---
+
+## Deployment & Infrastructure
+
+- **Backend**
+  - FastAPI (Python 3.10)
+  - Loads embeddings and FAISS index at startup
+  - Designed for stateless inference
+
+- **Frontend**
+  - Streamlit (Python 3.13)
+  - Thin client architecture
+  - Calls backend via REST APIs
+
+Deployment explicitly accounts for Python version and dependency constraints.
+
+---
+
+## Engineering Tradeoffs & Decisions
+
+- Decoupled training, inference, and UI
+- Used ANN search instead of brute-force scoring
+- Avoided metric inflation via hard-negative evaluation
+- Chose simpler models where appropriate for reliability
+- Designed for real deployment constraints (cold starts, infra limits)
+
+---
+
+## Future Extensions
+
+- Session-based features
+- Popularity and recency blending
+- Online A/B testing hooks
+- Feature store integration
+- GPU-based ANN for larger catalogs
+
+
+---
+
+## One-Line Summary
+
+An end-to-end recommender system with offline training, hard-negative evaluation, FAISS-based online inference, and a thin UI — designed around real production constraints.
